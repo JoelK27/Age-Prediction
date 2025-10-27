@@ -2,6 +2,12 @@ import os, collections, pandas as pd, matplotlib.pyplot as plt, seaborn as sns
 from src.data.dataset import _extract_age, _normalize_name
 
 def analyze(root: str, out_dir="reports"):
+    if not os.path.isdir(root):
+        print(f"Pfad nicht gefunden: {root}")
+        print(f"Aktuelles Arbeitsverzeichnis: {os.getcwd()}")
+        print("Tipp: Nutze den absoluten Pfad oder den korrekten relativen Pfad, z.B.:")
+        print(r'python -m src.analysis --data_dir "src\data\UTKface_inthewild\part3"')
+        return
     os.makedirs(out_dir, exist_ok=True)
     ages = []
     exts = collections.Counter()

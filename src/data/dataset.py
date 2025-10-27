@@ -7,8 +7,9 @@ import torch
 VALID_EXT = {".jpg", ".jpeg", ".png", ".pg"}  # .pg in deinem Dump
 
 def _normalize_name(fn: str) -> str:
-    # Fälle wie 55_0_0_...25357jpg -> künstlich ".jpg" einfügen falls fehlt
-    if fn.lower().endswith("jpg") and not fn.lower().endswith(".jpg"):
+    # Fälle wie ...25357jpg -> ".jpg" ergänzen (nur fürs Parsing)
+    lower = fn.lower()
+    if lower.endswith("jpg") and not lower.endswith(".jpg"):
         return fn[:-3] + ".jpg"
     return fn
 
@@ -44,8 +45,10 @@ class AgeDataset(Dataset):
             age = _extract_age(fn)
             if age is None or not (min_age <= age <= max_age):
                 continue
+            name_lower = fn.lower()
             ext = "." + fn.split(".")[-1].lower() if "." in fn else ""
-            if ext in VALID_EXT:
+            # akzeptiere normale Endungen und auch Dateien, die nur auf "jpg" enden (ohne Punkt)
+            if ext in VALID_EXT or (ext == "" and name_lower.endswith("jpg")):
                 path = os.path.join(root_dir, fn)
                 self.samples.append((path, age))
         if not self.samples:
@@ -62,10 +65,6 @@ class AgeDataset(Dataset):
 
     def __getitem__(self, idx):
         path, age = self.samples[idx]
-        norm_name = _normalize_name(path)
-        if norm_name != path and os.path.exists(path):
-            # optional: rename on the fly (nicht zwingend)
-            pass
         img = Image.open(path).convert("RGB")
         if self.transform:
             img = self.transform(img)

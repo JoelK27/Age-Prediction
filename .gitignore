@@ -1,16 +1,14 @@
-# UTKFace in the Wild Dataset
-utkface_inthewild/
-**/utkface_inthewild/
-utkface_inthewild*
-*utkface_inthewild*
+# UTKFace dataset (nicht versionieren)
+src/data/UTKface_inthewild/
+src/data/UTKface_inthewild/**
 
-# Common dataset patterns
-*.jpg
-*.jpeg
-*.png
-*.bmp
-*.tiff
-*.tif
+# Entfernt: globale Bild-Pattern, damit Reports/Plots versioniert werden können
+# *.jpg
+# *.jpeg
+# *.png
+# *.bmp
+# *.tiff
+# *.tif
 
 # Python
 __pycache__/
