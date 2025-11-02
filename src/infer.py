@@ -8,6 +8,7 @@ from torchvision import transforms as T
 from PIL import Image
 
 from src.models.custom_cnn import CustomAgeCNN  # Modellarchitektur aus deinem Projekt
+from src.data.dataset import _extract_age  # Label aus Dateiname
 
 # Standard-Preprocessing wie im Training (Resize + Normalize auf [-1,1])
 def make_transform(img_size: int):
@@ -126,18 +127,30 @@ def run_folder(folder: str, model, regression: bool, tf, device, tta: bool, num_
         except Exception as e:
             print(f"Skip {p}: {e}")
 
-    # Ausgabe
     if not rows:
-        print("Keine validen Bilder gefunden.")
-        return
+        print("Keine validen Bilder gefunden."); return
+
+    # Kurze Konsole-Ausgabe
     for r in rows[:10]:
-        # ersten Zeilen zur Kontrolle ausgeben
         if regression:
             print(f"{r['path']}: {r['pred_age']}")
         else:
             conf_str = f" (p={r.get('confidence')})" if "confidence" in r else ""
             print(f"{r['path']}: {r['label']}{conf_str}")
     print(f"{len(rows)} Bilder inferiert.")
+
+    # Optional: Ground-Truth aus Dateinamen und MAE/MSE berechnen (nur Regression)
+    if regression:
+        gts, preds = [], []
+        for r in rows:
+            gt = _extract_age(os.path.basename(r["path"]))
+            if gt is not None:
+                gts.append(float(gt)); preds.append(float(r["pred_age"]))
+        if gts:
+            import numpy as np
+            mae = float(np.mean(np.abs(np.array(preds) - np.array(gts))))
+            mse = float(np.mean((np.array(preds) - np.array(gts))**2))
+            print(f"Eval (aus Dateinamen): MAE={mae:.2f} MSE={mse:.2f} auf {len(gts)} Bildern")
 
     if out_csv:
         try:
