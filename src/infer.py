@@ -23,23 +23,26 @@ def load_checkpoint(checkpoint_path: str, device: torch.device):
     cfg = ckpt.get("args", {})            # Trainings-Argumente, wenn vorhanden
     return state_dict, cfg
 
-def build_model_from_ckpt(cfg: dict, override_regression: Optional[bool], num_classes: Optional[int], model_width: Optional[int], device: torch.device):
-    # Defaults aus Checkpoint ziehen, CLI kann überschreiben
+def build_model_from_ckpt(cfg: dict, override_regression: Optional[bool], num_classes: Optional[int], model_width: Optional[int], classifier_dropout: Optional[float], device: torch.device):    # Defaults aus Checkpoint ziehen, CLI kann überschreiben
     regression = cfg.get("regression", True) if override_regression is None else override_regression
     nc = cfg.get("num_classes", 10)
     if num_classes is not None:
-        nc = num_classes
+         nc = num_classes
     width = cfg.get("model_width", 32)
     if model_width is not None:
         width = model_width
 
-    model = CustomAgeCNN(regression=regression, num_classes=nc, width=width).to(device)
+    drop = cfg.get("classifier_dropout", 0.35)
+    if classifier_dropout is not None:
+        drop = classifier_dropout
+
+    model = CustomAgeCNN(regression=regression, num_classes=nc, width=width, classifier_dropout=drop).to(device)
     model.eval()
     return model, regression, nc, width
 
 def predict_tensor(model: torch.nn.Module, x: torch.Tensor, regression: bool, tta: bool) -> Tuple[float, Optional[float], Optional[int]]:
     # x: (1,3,H,W) auf device
-    with torch.no_grad():
+    with torch.inference_mode():
         if not regression:
             # Klassifikation: logits -> softmax-Probs
             if tta:
@@ -161,6 +164,7 @@ def parse_args():
     ap.add_argument("--model_width", type=int, help="Modellbreite, Default aus Checkpoint")
     ap.add_argument("--num_classes", type=int, help="Nur für Klassifikation, Default aus Checkpoint")
     ap.add_argument("--regression", type=lambda v: v.lower() in ("1","true","yes"), help="True/False zum Überschreiben")
+    ap.add_argument("--classifier_dropout", type=float, help="Dropout im Classifier (nur Form, eval deaktiviert)")
     ap.add_argument("--out_csv", help="CSV-Ziel für Batch-Inferenz")
     return ap.parse_args()
 
@@ -186,6 +190,7 @@ def main():
         override_regression=args.regression,
         num_classes=args.num_classes,
         model_width=args.model_width,
+        classifier_dropout=args.classifier_dropout,
         device=device
     )
     # Gewichte laden
