@@ -1,7 +1,5 @@
 # Project Report – Age Prediction
 
-Datum: 27.10.2025
-
 1) Dataset-Beschreibung
 - Quelle/Typ: UTKFace-ähnlicher „in the wild“ Datensatz mit Dateinamensschema age_gender_race_timestamp.ext. Geladen über [`src/data/dataset.py`](src/data/dataset.py) (Klasse `AgeDataset`).
 - Struktur: Bilder liegen flach in einem Ordner (nicht rekursiv). Beispiele: 23_0_0_201701161745.jpg, inkl. Sonderfall-Dateien, die auf „jpg“ enden ohne Punkt (…25357jpg), die vom Loader unterstützt werden.

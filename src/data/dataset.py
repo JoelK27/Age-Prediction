@@ -41,7 +41,7 @@ class AgeDataset(Dataset):
         self.regression = regression
         self.age_bins = age_bins
         self.samples = []
-        for fn in os.listdir(root_dir):
+        for fn in sorted(os.listdir(root_dir)):
             age = _extract_age(fn)
             if age is None or not (min_age <= age <= max_age):
                 continue
