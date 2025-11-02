@@ -178,9 +178,15 @@ def main():
     elif args.scheduler == "cosine":
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
     elif args.scheduler == "plateau":
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.5, patience=2, min_lr=1e-5, verbose=True
-        )
+        try:
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, mode="min", factor=0.5, patience=2, min_lr=1e-5, verbose=True
+            )
+        except TypeError:
+            # ältere Torch-Version ohne 'verbose' unterstützt
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, mode="min", factor=0.5, patience=2, min_lr=1e-5
+            )
     else:
         scheduler = None
 
@@ -279,7 +285,7 @@ def main():
         eval_model = ema_model if ema_model is not None else model
         val_loss, val_mae, val_mse, val_acc = evaluate(eval_model)
 
-        if args.scheduler == "plateau":
+        if scheduler and args.scheduler == "plateau":
             sched_metric = val_mae if args.regression else val_loss
             scheduler.step(sched_metric)
 
