@@ -2,6 +2,7 @@ import os, argparse, math, random
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
+from torch.utils.data.sampler import WeightedRandomSampler
 from torchvision import transforms, utils
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -67,6 +68,7 @@ def get_args():
     ap.add_argument("--aug_strength", choices=["simple","strong"], default="simple")
     ap.add_argument("--mixup", type=float, default=0.0, help="Mixup-Alpha (nur Regression)")
     ap.add_argument("--label_smoothing", type=float, default=0.0, help="Nur Klassifikation")
+    ap.add_argument("--balanced_sampler", action="store_true", help="Ausgeglichenes Sampling nach Alters-Dekaden")
     return ap.parse_args()
 
 def main():
@@ -130,17 +132,33 @@ def main():
     pin = device == "cuda"
     nw = int(args.num_workers)
 
+    # Optional: Balancing per Dekaden-Bucket
+    sampler = None
+    if args.balanced_sampler:
+        counts = [0]*10
+        for i in train_idx:
+            counts[age_to_bin(ages[i])] += 1
+        weights = []
+        for i in train_idx:
+            b = age_to_bin(ages[i])
+            w = 1.0 / max(1, counts[b])
+            weights.append(w)
+        sampler = WeightedRandomSampler(weights=weights, num_samples=len(weights), replacement=True)
+
+
     # DataLoader erstellen (prefetch_factor nur setzen, wenn Worker > 0)
     if nw > 0:
-        train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
-                                  num_workers=nw, pin_memory=pin, persistent_workers=True,
-                                  prefetch_factor=2)
+        train_loader = DataLoader(train_ds, batch_size=args.batch_size,
+                                  shuffle=(sampler is None), sampler=sampler,
+                                   num_workers=nw, pin_memory=pin, persistent_workers=True,
+                                   prefetch_factor=2)
         val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
-                                num_workers=nw, pin_memory=pin, persistent_workers=True,
-                                prefetch_factor=2)
+                                 num_workers=nw, pin_memory=pin, persistent_workers=True,
+                                 prefetch_factor=2)
     else:
-        train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
-                                  num_workers=0, pin_memory=pin)
+        train_loader = DataLoader(train_ds, batch_size=args.batch_size,
+                                  shuffle=(sampler is None), sampler=sampler,
+                                   num_workers=0, pin_memory=pin)
         val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
                                 num_workers=0, pin_memory=pin)
 
