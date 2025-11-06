@@ -1,16 +1,28 @@
+"""
+Einfache Explorationsanalyse des Datensatzes:
+- Prüft Pfad, listet valide Dateien
+- Extrahiert Alterslabels aus Dateinamen
+- Gibt Basisstatistiken aus
+- Speichert Histogramm 'age_distribution.png' im reports/-Ordner
+"""
+
 import os, collections, pandas as pd, matplotlib.pyplot as plt, seaborn as sns
 from src.data.dataset import _extract_age, _normalize_name
 
 def analyze(root: str, out_dir="reports"):
+    # Nutzerfreundliche Fehlermeldungen bei falschem Pfad
     if not os.path.isdir(root):
         print(f"Pfad nicht gefunden: {root}")
         print(f"Aktuelles Arbeitsverzeichnis: {os.getcwd()}")
         print("Tipp: Nutze den absoluten Pfad oder den korrekten relativen Pfad, z.B.:")
         print(r'python -m src.analysis --data_dir "src\data\UTKface_inthewild\part3"')
         return
+
     os.makedirs(out_dir, exist_ok=True)
     ages = []
     exts = collections.Counter()
+
+    # Einfache, nicht-rekursive Dateischleife
     for fn in os.listdir(root):
         age = _extract_age(fn)
         if age is not None:
@@ -21,13 +33,16 @@ def analyze(root: str, out_dir="reports"):
     if not ages:
         print("Keine Alterslabels gefunden.")
         return
+
+    # Basisstatistiken
     s = pd.Series(ages)
     print("Anzahl Bilder:", len(s))
     print("Alter Min/Max/Ø:", s.min(), s.max(), round(s.mean(),2))
     print("Perzentile (25/50/75):", s.quantile([0.25,0.5,0.75]).to_dict())
     print("Extensions:", exts)
 
-    plt.figure(figsize= (8,4))
+    # Verteilungsplot speichern
+    plt.figure(figsize=(8,4))
     sns.histplot(s, bins=30, kde=True)
     plt.title("Altersverteilung")
     plt.xlabel("Alter")
